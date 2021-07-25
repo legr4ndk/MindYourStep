@@ -28,11 +28,25 @@ export class PlayerController extends Component {
     // 角色目标位置
     private _targetPos: Vec3 = new Vec3();
 
+    private _curMoveIndex = 0;
+
+
     start() {
         // Your initialization goes here.
-        systemEvent.on(SystemEvent.EventType.MOUSE_UP, this.onMouseUp, this);
+        // systemEvent.on(SystemEvent.EventType.MOUSE_UP, this.onMouseUp, this);
     }
 
+    reset() {
+        this._curMoveIndex = 0;
+    }
+
+    setInputActive(active: boolean) {
+        if (active) {
+            systemEvent.on(SystemEvent.EventType.MOUSE_UP, this.onMouseUp, this);
+        } else {
+            systemEvent.off(SystemEvent.EventType.MOUSE_UP, this.onMouseUp, this);
+        }
+    }
 
     @property({ type: Animation })
     public BodyAnim: Animation | null = null;
@@ -64,6 +78,12 @@ export class PlayerController extends Component {
         this._curJumpSpeed = this._jumpStep / this._jumpTime;
         this.node.getPosition(this._curPos);
         Vec3.add(this._targetPos, this._curPos, new Vec3(this._jumpStep, 0, 0));
+
+        this._curMoveIndex += step;
+    }
+
+    onOnceJumpEnd() {
+        this.node.emit('JumpEnd', this._curMoveIndex);
     }
 
     update(deltaTime: number) {
