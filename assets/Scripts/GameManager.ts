@@ -34,9 +34,9 @@ export class GameManager extends Component {
     @property({ type: Label })
     public stepsLabel: Label | null = null;
 
-    start() {
+    start () {
         this.curState = GameState.GS_INIT;
-        this.playerCtrl?.node.on('JumpEnd', this.onPlayerJumpEnd, this);
+        (<PlayerController>this.playerCtrl).node.on('JumpEnd', this.onPlayerJumpEnd, this);
     }
 
     init() {
@@ -46,41 +46,34 @@ export class GameManager extends Component {
         }
         // 生成赛道
         this.generateRoad();
-        if (this.playerCtrl) {
+        if(this.playerCtrl){
             // 禁止接收用户操作人物移动指令
             this.playerCtrl.setInputActive(false);
             // 重置人物位置
             this.playerCtrl.node.setPosition(Vec3.ZERO);
+            // 重置已经移动的步长数据
+            this.playerCtrl.reset();
         }
-        (<PlayerController>this.playerCtrl).reset();
     }
 
-    set curState(value: GameState) {
-        switch (value) {
+    set curState (value: GameState) {
+        switch(value) {
             case GameState.GS_INIT:
                 this.init();
                 break;
             case GameState.GS_PLAYING:
-                if (this.startMenu) {
-                    this.startMenu.active = false;
-                }
-
-                if (this.stepsLabel) {
-                    this.stepsLabel.string = '0';   // 将步数重置为0
-                }
-                setTimeout(() => {      // 直接设置 active 会直接开始监听鼠标事件，这里做了延迟处理
-                    if (this.playerCtrl) {
-                        this.playerCtrl.setInputActive(true);
-                    }
+                (<Node>this.startMenu).active = false;
+                (<Label>this.stepsLabel).string = '0';   // 将步数重置为0
+            // 设置 active 为 true 时会直接开始监听鼠标事件，此时鼠标抬起事件还未派发
+            // 会出现的现象就是，游戏开始的瞬间人物已经开始移动
+            // 因此，这里需要做延迟处理
+                setTimeout(() => {
+                    (<PlayerController>this.playerCtrl).setInputActive(true);
                 }, 0.1);
                 break;
             case GameState.GS_END:
                 break;
         }
-    }
-
-    onStartButtonClicked() {
-        this.curState = GameState.GS_PLAYING;
     }
 
     generateRoad() {
@@ -128,6 +121,11 @@ export class GameManager extends Component {
         return block;
     }
 
+    onStartButtonClicked() {
+        // 点击主界面 play 按钮，开始游戏
+        this.curState = GameState.GS_PLAYING;
+    }
+
     checkResult(moveIndex: number) {
         if (moveIndex <= this.roadLength) {
             // 跳到了坑上
@@ -141,8 +139,10 @@ export class GameManager extends Component {
 
     onPlayerJumpEnd(moveIndex: number) {
         (<Label>this.stepsLabel).string = '' + moveIndex;
+        // 检查当前下落道路的类型，获取结果
         this.checkResult(moveIndex);
     }
+
     // update (deltaTime: number) {
     //     // Your update function goes here.
     // }

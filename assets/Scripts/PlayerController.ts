@@ -1,4 +1,4 @@
-import { _decorator, Component, Vec3, systemEvent, SystemEvent, EventMouse, Animation } from 'cc';
+import { _decorator, Component, Vec3, systemEvent, SystemEvent, EventMouse, Animation,SkeletalAnimation } from 'cc';
 const { ccclass, property } = _decorator;
 
 @ccclass("PlayerController")
@@ -30,6 +30,9 @@ export class PlayerController extends Component {
 
     private _curMoveIndex = 0;
 
+    @property({type: SkeletalAnimation})
+    public CocosAnim: SkeletalAnimation | null = null;
+
 
     start() {
         // Your initialization goes here.
@@ -48,27 +51,16 @@ export class PlayerController extends Component {
         }
     }
 
-    @property({ type: Animation })
-    public BodyAnim: Animation | null = null;
-
     onMouseUp(event: EventMouse) {
         if (event.getButton() === 0) {
             this.jumpByStep(1);
-        }
-        else if (event.getButton() === 2) {
+        } else if (event.getButton() === 2) {
             this.jumpByStep(2);
         }
 
     }
 
     jumpByStep(step: number) {
-        if (this.BodyAnim) {
-            if (step === 1) {
-                this.BodyAnim.play('oneStep');
-            } else if (step === 2) {
-                this.BodyAnim.play('twoStep');
-            }
-        }
         if (this._startJump) {
             return;
         }
@@ -79,20 +71,37 @@ export class PlayerController extends Component {
         this.node.getPosition(this._curPos);
         Vec3.add(this._targetPos, this._curPos, new Vec3(this._jumpStep, 0, 0));
 
+        if (this.CocosAnim) {
+            this.CocosAnim.getState('cocos_anim_jump').speed = 3.5; //跳跃动画时间比较长，这里加速播放
+            this.CocosAnim.play('cocos_anim_jump'); //播放跳跃动画
+        }
+
+        // if (this.BodyAnim) {
+        //     if (step === 1) {
+        //         this.BodyAnim.play('oneStep');
+        //     } else if (step === 2) {
+        //         this.BodyAnim.play('twoStep');
+        //     }
+        // }
+
         this._curMoveIndex += step;
     }
 
     onOnceJumpEnd() {
+        if (this.CocosAnim) {
+            this.CocosAnim.play('cocos_anim_idle');
+        }
         this.node.emit('JumpEnd', this._curMoveIndex);
     }
 
-    update(deltaTime: number) {
+    update (deltaTime: number) {
         if (this._startJump) {
             this._curJumpTime += deltaTime;
             if (this._curJumpTime > this._jumpTime) {
                 // end
                 this.node.setPosition(this._targetPos);
                 this._startJump = false;
+                this.onOnceJumpEnd();
             } else {
                 // tween
                 this.node.getPosition(this._curPos);
